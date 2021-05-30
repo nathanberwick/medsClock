@@ -72,10 +72,7 @@ void loop()
 void resetRoutine()
 {
   if(resetFlag) //timer exceeded
-  {
     reset();
-    resetFlag = false;
-  }
 }
 
 void ledRoutine()
@@ -169,48 +166,28 @@ void Hours()
 void reset()
 {
     ledCounter = 0;
+    resetFlag = false;
+    timer.disable(timerID);
     for (int i = 0; i < numLeds; i++)
-    {
       digitalWrite(ledPinArray[i], LOW);
-    }
 }
 
 void updateLCD()
 {
   lcd.clear();
+      lcd.setCursor(2, 1);
   if (Hour < 10)
-  {
-    lcd.setCursor(2, 1);
     lcd.print(0);
-    lcd.print(Hour);
-  }
-  else
-  {
-    lcd.setCursor(2, 1);
-    lcd.print(Hour);
-  }
+  lcd.print(Hour);
 
   lcd.print(" : ");
 
   if (Min < 10)
-  {
     lcd.print(0);
-    lcd.print(Min);
-  }
-  else
-  {
-    lcd.print(Min);
-  }
+  lcd.print(Min);
   
   lcd.print(" : ");
-
-    if (Sec < 10)
-  {
+  if (Sec < 10)
     lcd.print(0);
-    lcd.print(Sec);
-  }
-  else
-  {
-    lcd.print(Sec);
-  }
+  lcd.print(Sec);
 }
