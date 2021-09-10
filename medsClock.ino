@@ -1,88 +1,86 @@
 #include <SimpleTimer.h>
+#include "RTClib.h"
+#include <LiquidCrystal_I2C.h>
 
-
+RTC_DS3231 rtc;
+LiquidCrystal_I2C lcd(0x27,16,2);
 
 // https://forum.arduino.cc/t/making-an-arduino-clock/485102
 // ideas from here
 
+int currentDay = 0;
 
 //SYSTEM VARIABLES
 SimpleTimer timer;
-LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
-int ledPinArray[] = {6}; //,7,8}; //REMEMBER TO CHANGE THE CONSTANT IN THE []s.
-const int ledSwitchPin = 5;
+const int ledSwitchPin = 7;
+int ledPinArray[] = {8,9}; //,7,8}; //REMEMBER TO CHANGE THE CONSTANT IN THE []s.
+
 bool ledSwitchPressed = false;
-bool hourSwitchPressed = false;
-bool minuteSwitchPressed = false;
 bool resetFlag = false;
-
 bool ledSwitchDebouncer = false;
-bool hourSwitchDebouncer = false;
-bool minuteSwitchDebouncer = false;
-const int backlight = 1;
-const int minuteSwitchPin = 2;
-const int hourSwitchPin = 3;
-
-
-const int numLeds = 1; //3;
 
 int ledCounter = 0;
-
-int hours = 0;      //Hour integer
-int minutes = 0;        //Minute integer
-int seconds = 0;        //Seconds integer
-
-const int loopCount = 500; //temp. debug var. use for appropriate button response.
-const int resetTimerMs = 2000;
+const int numLeds = 2; //3;
+const int timerLengthMs = 2000;
+int previousSecond = 0;
 int timerID;
 
 void setup()
 {
-  pinMode(backlight, OUTPUT);
-  pinMode(minuteSwitchPin, INPUT);
-  pinMode(hourSwitchPin, INPUT);
+  lcd.init();
+ 
+  lcd.backlight();
+  lcd.print("Mo's Meds V2");
+  lcd.setCursor(0,1);
+
+  rtc.begin();
+  
   pinMode(ledSwitchPin, INPUT);
-  timerID = timer.setInterval(resetTimerMs, setTimerFlag);
+  timerID = timer.setInterval(timerLengthMs, setTimerFlag);
   for (int i = 0; i < numLeds; i++)
     pinMode(ledPinArray[i], OUTPUT);
-  analogWrite(BackLight, ValBL);
 }
+
+void loop()
+{
+  //button read ins
+  ledRoutine();
+
+  DateTime now = rtc.now();
+  //if time changed, update LCD.
+  if (previousSecond != now.second())
+  {
+    previousSecond = now.second();
+    updateLCD(now.hour(), now.minute(), now.second());
+
+    //if new day, reset LEDs.
+    if (currentDay != now.day())
+    {
+      reset();
+      currentDay = now.day();
+    }
+  }
+
+  //reset LEDs if timer exceeded
+  if (resetFlag)
+    reset();
+}
+
 void setTimerFlag()
 {
   resetFlag = true;
-}
-void loop()
-{
-  seconds++;
-  Seconds();
-  Minutes();
-  Hours();
-
-  updateLCD();
-  for (int i = 0; i < loopCount; i++)
-  {
-    ledRoutine();
-    hourRoutine();
-    minuteRoutine();
-    resetRoutine();
-    delay(1000/loopCount);
-  }
-}
-
-void resetRoutine()
-{
-  if(resetFlag) //timer exceeded
-    reset();
 }
 
 void ledRoutine()
 {
     ledSwitchPressed = digitalRead(ledSwitchPin);
+    //switch released
     if (!ledSwitchPressed && ledSwitchDebouncer)
     {
       timer.disable(timerID);
-      ledSwitchDebouncer == false;
+      ledSwitchDebouncer = false;
     }
+    //switch pressed
     else if (ledSwitchPressed && !ledSwitchDebouncer)
     {
       ledSwitchDebouncer = true;
@@ -90,77 +88,10 @@ void ledRoutine()
       incrementCounter();
 
       //resetTimer
+      resetFlag = false; //TODO: check whether this is necessary here
+      timerID = timer.setTimeout(timerLengthMs, setTimerFlag);
       timer.restartTimer(timerID);
-      //resetFlag = false; //TODO: check whether this is necessary here
-      timerID = timer.setTimeout(resetTimerMs, setTimerFlag);
     }
-}
-
-void hourRoutine()
-{
-    hourSwitchPressed = digitalRead(hourSwitchPin);
-    if (!hourSwitchPressed && hourSwitchDebouncer)
-    {
-      hourSwitchDebouncer == false;
-    }
-    else if (hourSwitchPressed && !hourSwitchDebouncer)
-    {
-      hourSwitchDebouncer = true;
-      hours++;
-      updateLCD();
-    }
-}
-
-void minuteRoutine()
-{
-    minuteSwitchPressed = digitalRead(minuteSwitchPin);
-    if (!minuteSwitchPressed && minuteSwitchDebouncer)
-    {
-      minuteSwitchDebouncer == false;
-    }
-    else if (minuteSwitchPressed && !minuteSwitchDebouncer)
-    {
-      minuteSwitchDebouncer = true;
-      minutes++;
-      updateLCD();
-    }
-}
-
-void incrementCounter()
-{
-  ledCounter++;
-  if (ledCounter == numLeds) //counter rollover.
-    ledCounter = 0;
-}
-
-//Loop that adds the Seconds
-void Seconds()
-{
-  if (seconds == 60)
-  {
-    seconds = 0;
-    minutes++;
-  }
-}
-
-//Loop that adds the Minutes
-void Minutes()
-{
-  if (minutes == 60)
-  {
-    minutes = 0;
-    hours++;
-  }
-}
-
-//Loop that resets the Hours
-void Hours()
-{
-  if (hours == 24)
-  {
-    hours = 0;
-    reset();
-  }
 }
 
 void reset()
@@ -172,22 +103,29 @@ void reset()
       digitalWrite(ledPinArray[i], LOW);
 }
 
-void updateLCD()
+void updateLCD(int hour, int minute, int second)
 {
-  lcd.clear();
-      lcd.setCursor(2, 1);
-  if (Hour < 10)
-    lcd.print(0);
-  lcd.print(Hour);
-
-  lcd.print(" : ");
-
-  if (Min < 10)
-    lcd.print(0);
-  lcd.print(Min);
+  lcd.setCursor(0,1);
+  int temp = hour;
+  if (temp < 10)
+    lcd.print(0, DEC);
+  lcd.print(temp, DEC);
+  lcd.print(':');
   
-  lcd.print(" : ");
-  if (Sec < 10)
-    lcd.print(0);
-  lcd.print(Sec);
+  temp = minute;
+  if (temp < 10)
+    lcd.print(0, DEC);
+  lcd.print(temp, DEC);
+    lcd.print(':');
+  temp = second;
+  if (temp < 10)
+    lcd.print(0, DEC);
+  lcd.print(temp, DEC);
+}
+
+void incrementCounter()
+{
+  ledCounter++;
+  if (ledCounter == numLeds) //counter rollover.
+    ledCounter = 0;
 }
