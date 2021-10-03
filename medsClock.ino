@@ -1,6 +1,7 @@
 #include <SimpleTimer.h>
 #include "RTClib.h"
 #include <LiquidCrystal_I2C.h>
+#define DEBUG
 
 RTC_DS3231 rtc;
 LiquidCrystal_I2C lcd(0x27,16,2);
@@ -13,7 +14,7 @@ int currentDay = 0;
 //SYSTEM VARIABLES
 SimpleTimer timer;
 const int ledSwitchPin = 7;
-int ledPinArray[] = {8,9}; //,7,8}; //REMEMBER TO CHANGE THE CONSTANT IN THE []s.
+int ledPinArray[] = {2,4}; //,7,8}; //REMEMBER TO CHANGE THE CONSTANT IN THE []s.
 
 bool ledSwitchPressed = false;
 bool resetFlag = false;
@@ -28,21 +29,25 @@ int timerID;
 void setup()
 {
   lcd.init();
- 
   lcd.backlight();
+
+ #ifndef DEBUG
   lcd.print("Mo's Meds V2");
   lcd.setCursor(0,1);
+ #endif
 
   rtc.begin();
   
   pinMode(ledSwitchPin, INPUT);
   timerID = timer.setInterval(timerLengthMs, setTimerFlag);
+        timer.enable(timerID);
   for (int i = 0; i < numLeds; i++)
     pinMode(ledPinArray[i], OUTPUT);
 }
 
 void loop()
 {
+  timer.run();
   //button read ins
   ledRoutine();
 
@@ -68,6 +73,10 @@ void loop()
 
 void setTimerFlag()
 {
+    #ifdef DEBUG
+  lcd. setCursor(0,0);
+  lcd.print("RESET FUNC HIT ");
+  #endif
   resetFlag = true;
 }
 
@@ -77,8 +86,8 @@ void ledRoutine()
     //switch released
     if (!ledSwitchPressed && ledSwitchDebouncer)
     {
-      timer.disable(timerID);
       ledSwitchDebouncer = false;
+      timer.disable(timerID);
     }
     //switch pressed
     else if (ledSwitchPressed && !ledSwitchDebouncer)
@@ -88,9 +97,12 @@ void ledRoutine()
       incrementCounter();
 
       //resetTimer
+        #ifdef DEBUG
+  lcd. setCursor(0,0);
+  lcd.print("START RESET: ");
+  #endif
       resetFlag = false; //TODO: check whether this is necessary here
-      timerID = timer.setTimeout(timerLengthMs, setTimerFlag);
-      timer.restartTimer(timerID);
+      timer.enable(timerID);
     }
 }
 
@@ -105,6 +117,7 @@ void reset()
 
 void updateLCD(int hour, int minute, int second)
 {
+
   lcd.setCursor(0,1);
   int temp = hour;
   if (temp < 10)
@@ -125,7 +138,12 @@ void updateLCD(int hour, int minute, int second)
 
 void incrementCounter()
 {
+#ifdef DEBUG
+digitalWrite(13, HIGH);
+delay(10);
+digitalWrite(13, LOW);
+#endif
   ledCounter++;
-  if (ledCounter == numLeds) //counter rollover.
+  if (ledCounter >= numLeds) //counter rollover.
     ledCounter = 0;
 }
