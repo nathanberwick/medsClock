@@ -1,7 +1,7 @@
 #include <SimpleTimer.h>
 #include "RTClib.h"
 #include <LiquidCrystal_I2C.h>
-#define DEBUG
+//#define DEBUG
 
 RTC_DS3231 rtc;
 LiquidCrystal_I2C lcd(0x27,16,2);
@@ -14,7 +14,7 @@ int currentDay = 0;
 //SYSTEM VARIABLES
 SimpleTimer timer;
 const int ledSwitchPin = 7;
-int ledPinArray[] = {2,4}; //,7,8}; //REMEMBER TO CHANGE THE CONSTANT IN THE []s.
+int ledPinArray[] = {3,5}; //,7,8}; //REMEMBER TO CHANGE THE CONSTANT IN THE []s.
 
 bool ledSwitchPressed = false;
 bool resetFlag = false;
