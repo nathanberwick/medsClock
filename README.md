@@ -1,5 +1,5 @@
 # medsClock
-keep forgetting whether you've taken your mediation?
+keep forgetting whether you've taken your medication?
 
 This arduino based clock should be pretty nifty.
 
